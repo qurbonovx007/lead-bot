@@ -48,7 +48,7 @@ async def cmd_start(message: Message, state: FSMContext, bot: Bot):
     )
 
 # ===================== Ma'lumot qoldirish =====================
-@router.message(F.text == "📋 Ma'lumot qoldirish")
+@router.message(F.text == "📋 Ro'yhatdan o'tish")
 async def ask_name(message: Message, state: FSMContext):
     await state.set_state(LeadForm.waiting_name)
 
