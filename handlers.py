@@ -103,24 +103,23 @@ async def save_lead(message: Message, state: FSMContext, bot: Bot):
 
     # Leads guruhiga yuborish
     now = datetime.now().strftime("%d.%m.%Y %H:%M")
-    username_text = f"@{user.username}" if user.username else "Username yo'q"
+    username_text = f"@{user.username}" if user.username else "Username yoq"
 
     lead_message = (
-        "🔔 *YANGI LEAD!*\n"
+        "🔔 YANGI LEAD!\n"
         "━━━━━━━━━━━━━━━\n"
-        f"👤 *Ism-Familiya:* {full_name}\n"
-        f"📞 *Telefon:* `{phone}`\n"
-        f"🆔 *Username:* {username_text}\n"
-        f"🔗 *Telegram ID:* `{user.id}`\n"
-        f"🕐 *Vaqt:* {now}\n"
+        f"👤 Ism-Familiya: {full_name}\n"
+        f"📞 Telefon: {phone}\n"
+        f"🆔 Username: {username_text}\n"
+        f"🔗 Telegram ID: {user.id}\n"
+        f"🕐 Vaqt: {now}\n"
         "━━━━━━━━━━━━━━━"
     )
 
     try:
         await bot.send_message(
             chat_id=LEADS_CHAT_ID,
-            text=lead_message,
-            parse_mode="Markdown"
+            text=lead_message
         )
     except Exception as e:
         # Admin ga xato xabari
