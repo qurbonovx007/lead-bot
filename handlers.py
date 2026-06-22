@@ -1,3 +1,4 @@
+import re
 from aiogram import Router, F, Bot
 from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove, BufferedInputFile
 from aiogram.filters import CommandStart, Command
@@ -20,6 +21,9 @@ class LeadForm(StatesGroup):
 
 class ClearConfirm(StatesGroup):
     waiting_confirm = State()
+
+# Telefon raqamni tekshirish uchun Regex (O'zbekiston raqamlari uchun moslashuvchan)
+PHONE_REGEX = re.compile(r"^(\+?998)?\s?\(?\d{2}\)?\s?\d{3}\s?\d{2}\s?\d{2}$|^9\d{8}$")
 
 # ===================== /start =====================
 @router.message(CommandStart())
@@ -82,17 +86,37 @@ async def ask_contact(message: Message, state: FSMContext):
 
     await message.answer(
         f"🤝 *Rahmat, {name}!*\n\n"
-        "📱 Endi pastdagi tugmani bosish orqali *telefon raqamingizni* yuboring:",
+        "📱 Telefon raqamingizni pastdagi tugmani bosib yuboring yoki *o'zingiz qo'lda yozib qoldiring*:\n\n"
+        "📌 Namuna: `+998901234567` yoki `901234567`",
         parse_mode="Markdown",
         reply_markup=contact_keyboard
     )
 
-# ===================== Kontakt qabul qilish =====================
-@router.message(LeadForm.waiting_contact, F.contact)
+# ===================== Kontakt qabul qilish (Tugma yoki Matn orqali) =====================
+@router.message(LeadForm.waiting_contact)
 async def save_lead(message: Message, state: FSMContext, bot: Bot):
+    # 1. Agar tugma orqali kontakt yuborilgan bo'lsa
+    if message.contact:
+        phone = message.contact.phone_number
+    # 2. Agar qo'lda matn ko'rinishida yozilgan bo'lsa
+    elif message.text:
+        phone_input = message.text.strip()
+        # Raqam to'g'ri formatdaligini tekshiramiz
+        if not PHONE_REGEX.match(phone_input.replace(" ", "")):
+            await message.answer(
+                "⚠️ *Xato telefon raqam kiritildi!*\n\n"
+                "Iltimos, raqamni to'g'ri formatda kiriting yoki tugmadan foydalaning.\n"
+                "📌 Namuna: `+998901234567`",
+                parse_mode="Markdown"
+            )
+            return
+        phone = phone_input
+    else:
+        # Rasm yoki boshqa narsa yuborsa
+        return
+
     data = await state.get_data()
     full_name = data.get("full_name")
-    phone = message.contact.phone_number
     user = message.from_user
 
     await update_user_lead(user.id, full_name, phone)
@@ -108,7 +132,7 @@ async def save_lead(message: Message, state: FSMContext, bot: Bot):
     now = datetime.now().strftime("%d.%m.%Y %H:%M")
     username_text = f"@{user.username}" if user.username else "Mavjud emas"
 
-    # Guruhga tushadigan ariza dizayni
+    # Guruhga boradigan ariza dizayni
     lead_message = (
         "⚡️ <b>YANGI ARIZA KELDI!</b>\n"
         "▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n\n"
@@ -128,23 +152,6 @@ async def save_lead(message: Message, state: FSMContext, bot: Bot):
                 await bot.send_message(admin_id, f"⚠️ Guruhga yuborishda xato: {e}")
             except:
                 pass
-
-# ===================== Kontakt o'rniga matn yuborsa =====================
-@router.message(LeadForm.waiting_contact)
-async def wrong_contact(message: Message):
-    contact_keyboard = ReplyKeyboardMarkup(
-        keyboard=[
-            [KeyboardButton(text="📞 Kontaktni ulash", request_contact=True)]
-        ],
-        resize_keyboard=True,
-        one_time_keyboard=True
-    )
-    await message.answer(
-        "⚠️ *Iltimos, faqat pastdagi tugmani bosing!*\n\n"
-        "Telefon raqamni qo'lda yozib yuborish mumkin emas.",
-        parse_mode="Markdown",
-        reply_markup=contact_keyboard
-    )
 
 # ===================== /stats - faqat admin =====================
 @router.message(Command("stats"))
@@ -184,7 +191,7 @@ async def show_period_stats(message: Message):
 
     period_key, period_label = period_map[message.text]
     stats = await get_stats(period_key)
-    deleted_count = await get_deleted_count()  # O'chirilganlarni bazadan olish
+    deleted_count = await get_deleted_count()
 
     total = stats["started"]
     completed = stats["completed"]
@@ -198,7 +205,6 @@ async def show_period_stats(message: Message):
     filled = int(conversion / 10)
     bar = "🟩" * filled + "⬜" * (10 - filled)
 
-    # Dizaynga o'chirilganlar soni ham qo'shildi
     await message.answer(
         f"📈 *Statistika — {period_label}*\n"
         f"▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n\n"
@@ -229,7 +235,7 @@ async def show_leads(message: Message):
     total_pages = max(1, (total + per_page - 1) // per_page)
 
     if not leads:
-        await message.answer("📭 Hozircha bazada hech qanday arizalar muzokarada emas.")
+        await message.answer("📭 Hozircha bazada hech qanday arizalar mavjud emas.")
         return
 
     lines = [
@@ -291,7 +297,7 @@ async def clear_leads_cmd(message: Message, state: FSMContext):
 
     total = await get_leads_count()
     if total == 0:
-        await message.answer("📭 Tozalash uchun bazada ma'lumot mavjud emas.")
+        await message.answer("📭 Tozalash uchun bazada ma'lumot magazini mavjud emas.")
         return
 
     confirm_keyboard = ReplyKeyboardMarkup(
