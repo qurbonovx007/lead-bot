@@ -1,6 +1,6 @@
 import re
 import os
-from aiogram import Router, F, Bot
+from aiogram import Router, F
 from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove, BufferedInputFile
 from aiogram.filters import CommandStart, Command
 from aiogram.fsm.context import FSMContext
@@ -44,7 +44,7 @@ PHONE_REGEX = re.compile(r"^(\+?998)?\s?\(?\d{2}\)?\s?\d{3}\s?\d{2}\s?\d{2}$|^9\
 
 # ===================== /start =====================
 @router.message(CommandStart())
-async def cmd_start(message: Message, state: FSMContext, bot: Bot):
+async def cmd_start(message: Message, state: FSMContext):
     await state.clear()
     
     user = message.from_user
@@ -109,7 +109,7 @@ async def ask_contact(message: Message, state: FSMContext):
 
 # ===================== Kontakt qabul qilish =====================
 @router.message(LeadForm.waiting_contact)
-async def save_lead(message: Message, state: FSMContext, bot: Bot):
+async def save_lead(message: Message, state: FSMContext):
     if message.contact:
         phone = message.contact.phone_number
     elif message.text:
@@ -153,18 +153,19 @@ async def save_lead(message: Message, state: FSMContext, bot: Bot):
         "▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬"
     )
 
-    try:
-        await bot.send_message(chat_id=LEADS_CHAT_ID, text=lead_message, parse_mode="HTML")
-    except Exception as e:
-        for admin_id in ADMIN_IDS:
-            try:
-                await bot.send_message(
-                    chat_id=admin_id, 
-                    text=f"⚠️ <b>Guruhga ariza yuborishda xatolik!</b>\n\nXato turi: <code>{e}</code>",
-                    parse_mode="HTML"
-                )
-            except:
-                pass
+    if message.bot:
+        try:
+            await message.bot.send_message(chat_id=LEADS_CHAT_ID, text=lead_message, parse_mode="HTML")
+        except Exception as e:
+            for admin_id in ADMIN_IDS:
+                try:
+                    await message.bot.send_message(
+                        chat_id=admin_id, 
+                        text=f"⚠️ <b>Guruhga ariza yuborishda xatolik!</b>\n\nXato turi: <code>{e}</code>",
+                        parse_mode="HTML"
+                    )
+                except:
+                    pass
 
 # ===================== /stats - faqat admin =====================
 @router.message(Command("stats"))
@@ -239,7 +240,7 @@ async def show_leads(message: Message):
     total_pages = max(1, (total + per_page - 1) // per_page)
 
     if not leads:
-        await message.answer("📭 Hozircha bazada hech qanday arizalar mavjud emas.")
+        await message.answer("📭 Hozircha bazada hech qanday arizalar magenta emas.")
         return
 
     lines = [
@@ -263,7 +264,7 @@ async def show_leads(message: Message):
 
 # ===================== /export - CSV yuklash =====================
 @router.message(Command("export"))
-async def export_leads(message: Message, bot: Bot):
+async def export_leads(message: Message):
     if message.from_user.id not in ADMIN_IDS:
         await message.answer("❌ Sizda bu buyruq uchun ruxsat yo'q.")
         return
@@ -278,12 +279,13 @@ async def export_leads(message: Message, bot: Bot):
     csv_bytes = await export_leads_csv()
     filename = f"leads_{datetime.now().strftime('%Y%m%d_%H%M')}.csv"
 
-    await bot.send_document(
-        chat_id=message.chat.id,
-        document=BufferedInputFile(csv_bytes, filename=filename),
-        caption=f"📊 *Eksport yakunlandi!*\n\nJami *{total}* ta lead ma'lumotlari Excel faylga yuklandi.",
-        parse_mode="Markdown"
-    )
+    if message.bot:
+        await message.bot.send_document(
+            chat_id=message.chat.id,
+            document=BufferedInputFile(csv_bytes, filename=filename),
+            caption=f"📊 *Eksport yakunlandi!*\n\nJami *{total}* ta lead ma'lumotlari Excel faylga yuklandi.",
+            parse_mode="Markdown"
+        )
 
 # ===================== /clear_leads =====================
 @router.message(Command("clear_leads"))
@@ -316,7 +318,6 @@ async def confirm_clear(message: Message, state: FSMContext):
         await state.clear()
         return
 
-    from database import clear_all_leads
     deleted = await clear_all_leads()
     await state.clear()
 
@@ -329,27 +330,27 @@ async def cancel_clear(message: Message, state: FSMContext):
 
 # ===================== Groq AI orqali savollarga javob berish =====================
 @router.message(F.text)
-async def handle_ai_chat(message: Message, bot: Bot):
+async def handle_ai_chat(message: Message):
     user_text = message.text.strip()
     
     # Tugmalar bo'lsa AI ishga tushmaydi
-    if user_text in [
-        "📝 Ro'yxatdan o'tish", "📅 Kunlik", "📆 Haftalik", 
-        "🗓 Oylik", "📊 Umumiy", "✅ Ha, o'chiraman", "❌ Bekor qilish"
-    ]:
+    if user_text in ["📝 Ro'yxatdan o'tish", "📅 Kunlik", "📆 Haftalik", "🗓 Oylik", "📊 Umumiy", "✅ Ha, o'chiraman", "❌ Bekor qilish"]:
         return
 
+    # Chat action (typing) xavfsiz holatda chaqiriladi
+    if message.bot:
+        try:
+            await message.bot.send_chat_action(chat_id=message.chat.id, action="typing")
+        except:
+            pass
+
     try:
-        # Bot "yozmoqda..." holatiga o'tadi
-        await bot.send_chat_action(chat_id=message.chat.id, action="typing")
-        
-        # Groq API orqali so'rov yuborish
         chat_completion = groq_client.chat.completions.create(
             messages=[
                 {"role": "system", "content": MAKTAB_MA'LUMOTLARI},
                 {"role": "user", "content": user_text}
             ],
-            model="llama-3.3-70b-specdec",  # Eng so'nggi va barqaror Groq modeli
+            model="llama-3.3-70b-specdec",
             temperature=0.4,
         )
         
@@ -357,8 +358,7 @@ async def handle_ai_chat(message: Message, bot: Bot):
         await message.answer(reply_text)
         
     except Exception as e:
-        # Agar Groq ulanishida biron bir xato bo'lsa (masalan API key xato bo'lsa) standart javob:
-        print(f"Groq AI xatolik yuz berdi: {e}") # Logda ko'rish uchun
+        print(f"Groq AI xatolik yuz berdi: {e}")
         await message.answer(
             "😊 Savolingiz uchun rahmat!\n\n"
             "Mudarris Xalqaro maktabi haqida batafsil ma'lumot olish yoki ro'yxatdan o'tish uchun "
