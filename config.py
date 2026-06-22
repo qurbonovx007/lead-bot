@@ -11,13 +11,15 @@ LEADS_CHAT_ID = int(os.getenv("LEADS_CHAT_ID", "-5341403054"))
 
 # Bot haqida matn
 BOT_ABOUT = """
-🏢 *Biznesimiz haqida*
+😊 Assalomu alaykum!
 
-Biz professional xizmatlar ko'rsatuvchi kompaniyamiz.
+Mudarris Xalqaro maktabi 0-sinfdan 11-sinfgacha bo‘lgan o‘quvchilarni qabul qiladi. Maktabimiz IT, robototexnika, arab tili va ingliz tili yo‘nalishlariga ixtisoslashtirilgan.
 
-✅ Yuqori sifatli xizmat
-✅ Tez va ishonchli
-✅ 24/7 qo'llab-quvvatlash
+ 👨‍🏫 Arab tili darslarini chet ellik malakali ustozlar olib boradilar.
 
-Ma'lumotlaringizni qoldiring — mutaxassisimiz siz bilan bog'lanadi!
+🏆 Farzandingiz maktabni bitirmasdan turib IELTS, CEFR va SAT kabi sertifikatlardan yuqori ball olish imkoniyatiga ega bo‘ladi, chunki bizda ushbu sertifikatlar uchun maxsus tayyorlov guruhlari ham mavjud. 
+
+🍽️ Maktabda kun davomida 4 mahal ovqat beriladi. 
+
+✍️ Batafsil ma’lumot olish uchun ro‘yxatdan o‘ting.
 """
