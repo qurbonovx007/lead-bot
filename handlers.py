@@ -360,13 +360,13 @@ async def handle_ai_chat(message: Message):
     )
 
     try:
-        # Groq asinxron emas, sinxron funksiyalari orqali murojaat qilamiz
+# Modelni yengilroq va mutlaqo bepul versiyaga o'zgartiramiz
         chat_completion = groq_client.chat.completions.create(
             messages=[
                 {"role": "system", "content": MAKTAB_DATA},
                 {"role": "user", "content": user_text}
             ],
-            model="llama-3.3-70b-specdec",
+            model="llama3-8b-8192",  # Shu qatorni yangilang
             temperature=0.5,
         )
         
