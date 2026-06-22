@@ -1,10 +1,12 @@
 import re
+import os
 from aiogram import Router, F, Bot
 from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove, BufferedInputFile
 from aiogram.filters import CommandStart, Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from datetime import datetime
+from groq import Groq
 
 from config import ADMIN_IDS, LEADS_CHAT_ID
 from database import (
@@ -13,6 +15,22 @@ from database import (
 )
 
 router = Router()
+
+# Groq mijozini Railway'dagi GROQ_API_KEY orqali ishga tushiramiz
+groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+
+# AI uchun maktab haqidagi ma'lumotlar (Prompt)
+MAKTAB_MA'LUMOTLARI = """
+Siz "Mudarris Xalqaro maktabi"ning virtual yordamchisiz. Foydalanuvchilar savollariga faqat quyidagi ma'lumotlar asosida, o'zbek tilida, xushmuomala va juda qisqa javob bering:
+1. Maktab qabul qiladi: 0-sinfdan 11-sinfgacha bo'lgan o'quvchilarni.
+2. Ixtisoslashuvi: IT, robototexnika, arab tili va ingliz tili.
+3. Ustunliklari: Arab tili darslarini chet ellik malakali ustozlar o'tadilar. IELTS, CEFR va SAT sertifikatlariga maxsus tayyorlov guruhlari bor.
+4. Sharoitlar: Kun davomida 4 mahal issiq ovqat beriladi.
+5. Filiallar: Sergeli, Qo'yliq, Katta Qa'ni.
+6. Kontakt telefoni: 55-513-75-75.
+
+Agar foydalanuvchi ro'yxatdan o'tmoqchi bo'lsa yoki darsga yozilishni xohlasa, unga "📝 Ro'yxatdan o'tish" tugmasini bosishini ayting. Berilgan ma'lumotlardan tashqaridagi mutlaqo boshqa mavzularda savol berishsa, muloyimlik bilan faqat Mudarris maktabi haqida javob bera olishingizni eslating.
+"""
 
 class LeadForm(StatesGroup):
     waiting_name = State()
@@ -32,11 +50,9 @@ async def cmd_start(message: Message, state: FSMContext, bot: Bot):
     user = message.from_user
     await add_user_start(user.id, user.username or "")
 
-    # Link ichidagi argumentni tekshiramiz (masalan: /start reg)
     args = message.text.split()
     is_direct_reg = len(args) > 1 and args[1] == "reg"
 
-    # Uzun maktab matni
     about_text = (
         "😊 *Assalomu alaykum!*\n\n"
         "Mudarris Xalqaro maktabi 0-sinfdan 11-sinfgacha bo‘lgan o‘quvchilarni qabul qiladi. "
@@ -49,28 +65,17 @@ async def cmd_start(message: Message, state: FSMContext, bot: Bot):
     )
 
     if is_direct_reg:
-        # 1. Agar reklama linkidan kirgan bo'lsa: Uzun matnni yuboramiz
         await message.answer(about_text, parse_mode="Markdown", reply_markup=ReplyKeyboardRemove())
-        
-        # 2. Hech qanday tugmani kutmasdan, darhol keyingi bosqich (ism so'rash) holatiga o'tamiz
         await state.set_state(LeadForm.waiting_name)
-        
-        # 3. Ketidan ism so'rash matnini yuboramiz
-        await message.answer(
-            "📝 *Ismingizni kiriting:*",
-            parse_mode="Markdown"
-        )
+        await message.answer("📝 *Ismingizni kiriting:*", parse_mode="Markdown")
     else:
-        # Agar oddiy qidiruvdan kirgan bo'lsa, pastda "Ro'yxatdan o'tish" tugmasi chiqadi
         about_keyboard = ReplyKeyboardMarkup(
-            keyboard=[
-                [KeyboardButton(text="📝 Ro'yxatdan o'tish")]
-            ],
+            keyboard=[[KeyboardButton(text="📝 Ro'yxatdan o'tish")]],
             resize_keyboard=True
         )
         await message.answer(about_text, parse_mode="Markdown", reply_markup=about_keyboard)
 
-# ===================== Ro'yxatdan o'tish (Oddiy kirganlar uchun) =====================
+# ===================== Ro'yxatdan o'tish =====================
 @router.message(F.text == "📝 Ro'yxatdan o'tish")
 async def ask_name(message: Message, state: FSMContext):
     await state.set_state(LeadForm.waiting_name)
@@ -85,14 +90,11 @@ async def ask_name(message: Message, state: FSMContext):
 async def ask_contact(message: Message, state: FSMContext):
     name = message.text.strip()
 
-    # Har qanday kiritilgan matnni (bitta harf bo'lsa ham) cheklovsiz qabul qiladi
     await state.update_data(full_name=name)
     await state.set_state(LeadForm.waiting_contact)
 
     contact_keyboard = ReplyKeyboardMarkup(
-        keyboard=[
-            [KeyboardButton(text="📞 Kontaktni ulash", request_contact=True)]
-        ],
+        keyboard=[[KeyboardButton(text="📞 Kontaktni ulash", request_contact=True)]],
         resize_keyboard=True,
         one_time_keyboard=True
     )
@@ -158,10 +160,7 @@ async def save_lead(message: Message, state: FSMContext, bot: Bot):
             try:
                 await bot.send_message(
                     chat_id=admin_id, 
-                    text=f"⚠️ <b>Guruhga ariza yuborishda xatolik!</b>\n\n"
-                         f"Xato turi: <code>{e}</code>\n"
-                         f"Kiritilgan Guruh ID: <code>{LEADS_CHAT_ID}</code>\n\n"
-                         f"<i>Iltimos, Railway panelida LEADS_CHAT_ID o'zgaruvchisini va bot guruhda admin ekanligini tekshiring!</i>",
+                    text=f"⚠️ <b>Guruhga ariza yuborishda xatolik!</b>\n\nXato turi: <code>{e}</code>",
                     parse_mode="HTML"
                 )
             except:
@@ -184,13 +183,11 @@ async def show_stats(message: Message):
 
     await message.answer(
         "📊 *Statistika boshqaruv paneli*\n\n"
-        "Qaysi davr bo'yicha hisobotlarni ko'rishni istaysiz? \n"
-        "Pastdagi tugmalardan birini tanlang:",
+        "Qaysi davr bo'yicha hisobotlarni ko'rishni istaysiz?",
         parse_mode="Markdown",
         reply_markup=stats_keyboard
     )
 
-# ===================== Statistika tugmalari =====================
 @router.message(F.text.in_(["📅 Kunlik", "📆 Haftalik", "🗓 Oylik", "📊 Umumiy"]))
 async def show_period_stats(message: Message):
     if message.from_user.id not in ADMIN_IDS:
@@ -210,11 +207,7 @@ async def show_period_stats(message: Message):
     completed = stats["completed"]
     not_completed = stats["not_completed"]
 
-    if total > 0:
-        conversion = round((completed / total) * 100, 1)
-    else:
-        conversion = 0.0
-
+    conversion = round((completed / total) * 100, 1) if total > 0 else 0.0
     filled = int(conversion / 10)
     bar = "🟩" * filled + "⬜" * (10 - filled)
 
@@ -225,8 +218,7 @@ async def show_period_stats(message: Message):
         f"✅  Ro'yxatdan o'tganlar:  *{completed}* ta\n\n"
         f"❌  Yarimta tashlab ketganlar:  *{not_completed}* ta\n\n"
         f"▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n"
-        f"📊  *Konversiya ko'rsatkichi:* *{conversion}%*\n"
-        f"{bar}",
+        f"📊  *Konversiya ko'rsatkichi:* *{conversion}%*\n{bar}",
         parse_mode="Markdown"
     )
 
@@ -259,19 +251,12 @@ async def show_leads(message: Message):
     for i, (tg_id, username, full_name, phone, completed_at) in enumerate(leads, start=offset + 1):
         uname = f"@{username}" if username else "yo'q"
         date_str = completed_at[:10] if completed_at else "—"
-        lines.append(
-            f"\n* {i}. {full_name}*\n"
-            f"   ▫️ Telefon: `{phone}`\n"
-            f"   ▫️ Profil: {uname} | `{tg_id}`\n"
-            f"   ▫️ Sana: _{date_str}_"
-        )
+        lines.append(f"\n* {i}. {full_name}*\n   ▫️ Telefon: `{phone}`\n   ▫️ Profil: {uname} | `{tg_id}`\n   ▫️ Sana: _{date_str}_")
 
     if total_pages > 1:
         nav = []
-        if page > 1:
-            nav.append(f"◀️ `/leads {page - 1}`")
-        if page < total_pages:
-            nav.append(f"`/leads {page + 1}` ▶️")
+        if page > 1: nav.append(f"◀️ `/leads {page - 1}`")
+        if page < total_pages: nav.append(f"`/leads {page + 1}` ▶️")
         lines.append("\n▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n" + "   ".join(nav))
 
     await message.answer("\n".join(lines), parse_mode="Markdown")
@@ -300,7 +285,7 @@ async def export_leads(message: Message, bot: Bot):
         parse_mode="Markdown"
     )
 
-# ===================== /clear_leads - o'chirish =====================
+# ===================== /clear_leads =====================
 @router.message(Command("clear_leads"))
 async def clear_leads_cmd(message: Message, state: FSMContext):
     if message.from_user.id not in ADMIN_IDS:
@@ -313,20 +298,14 @@ async def clear_leads_cmd(message: Message, state: FSMContext):
         return
 
     confirm_keyboard = ReplyKeyboardMarkup(
-        keyboard=[
-            [KeyboardButton(text="✅ Ha, o'chiraman"), KeyboardButton(text="❌ Bekor qilish")]
-        ],
+        keyboard=[[KeyboardButton(text="✅ Ha, o'chiraman"), KeyboardButton(text="❌ Bekor qilish")]],
         resize_keyboard=True,
         one_time_keyboard=True
     )
 
     await state.set_state(ClearConfirm.waiting_confirm)
     await message.answer(
-        f"⚠️ *DIQQAT! JIDDIY OGOHLANTIRISH*\n"
-        f"▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n\n"
-        f"Bazada jami *{total}* ta foydalanuvchi ma'lumotlari mavjud.\n\n"
-        f"Haqiqatdan ham hammasini o'chirib, statistikani *0* ga tushirmoqchimisiz?\n\n"
-        f"ℹ️ _Ushbu amalni ortga qaytarib bo'lmaydi!_",
+        f"⚠️ *DIQQAT!*\n\nBazada jami *{total}* ta foydalanuvchi ma'lumotlari bor. O'chirilsa ortga qaytarib bo'lmaydi!",
         parse_mode="Markdown",
         reply_markup=confirm_keyboard
     )
@@ -337,25 +316,44 @@ async def confirm_clear(message: Message, state: FSMContext):
         await state.clear()
         return
 
+    from database import clear_all_leads
     deleted = await clear_all_leads()
     await state.clear()
 
-    await message.answer(
-        f"🗑 *Muvaffaqiyatli tozalandi!*\n\n"
-        f"Bazada vaqtinchalik yozuvlar butunlay o'chirildi va statistika 0 ga tushirildi. ✅",
-        parse_mode="Markdown",
-        reply_markup=ReplyKeyboardRemove()
-    )
+    await message.answer(f"🗑 Bazada mavjud bo'lgan *{deleted}* ta yozuv butunlay o'chirildi! ✅", parse_mode="Markdown", reply_markup=ReplyKeyboardRemove())
 
 @router.message(ClearConfirm.waiting_confirm, F.text == "❌ Bekor qilish")
 async def cancel_clear(message: Message, state: FSMContext):
     await state.clear()
-    await message.answer(
-        "✅ *Bekor qilindi.* Ma'lumotlar bazasi o'zgarishsiz qoldirildi.",
-        parse_mode="Markdown",
-        reply_markup=ReplyKeyboardRemove()
-    )
+    await message.answer("✅ *Bekor qilindi.*", parse_mode="Markdown", reply_markup=ReplyKeyboardRemove())
 
-@router.message(ClearConfirm.waiting_confirm)
-async def clear_wrong_input(message: Message):
-    await message.answer("⚠️ Iltimos, faqat taqdim etilgan tugmalardan birini bosing.")
+# ===================== Groq AI orqali savollarga javob berish =====================
+@router.message(F.text)
+async def handle_ai_chat(message: Message, bot: Bot):
+    user_text = message.text.strip()
+    
+    # Tugmalar bo'lsa AI ishga tushmaydi
+    if user_text in ["📝 Ro'yxatdan o'tish", "📅 Kunlik", "📆 Haftalik", "🗓 Oylik", "📊 Umumiy", "✅ Ha, o'chiraman", "❌ Bekor qilish"]:
+        return
+
+    await bot.send_chat_action(chat_id=message.chat.id, action="typing")
+
+    try:
+        chat_completion = groq_client.chat.completions.create(
+            messages=[
+                {"role": "system", "content": MAKTAB_MA'LUMOTLARI},
+                {"role": "user", "content": user_text}
+            ],
+            model="llama3-8b-8192",
+            temperature=0.4,
+        )
+        
+        reply_text = chat_completion.choices[0].message.content
+        await message.answer(reply_text, parse_mode="Markdown")
+        
+    except Exception as e:
+        await message.answer(
+            "😊 Savolingiz uchun rahmat!\n\n"
+            "Mudarris Xalqaro maktabi haqida batafsil ma'lumot olish yoki ro'yxatdan o'tish uchun "
+            "pastdagi tugmani bosing yoki operatorimiz bilan bog'laning: 📞 55-513-75-75."
+        )
