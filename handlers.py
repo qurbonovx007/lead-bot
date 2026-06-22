@@ -61,7 +61,7 @@ async def ask_name(message: Message, state: FSMContext):
 
     await message.answer(
         "📝 *Ism va familiyangizni kiriting:*\n\n"
-        "📌 Namuna: `Abdullayev Jasur` \n\n"
+        "📌 Namuna: `Jasur` \n\n"
         "ℹ️ _Iltimos, ism va familiyangizni to'liq kiriting._",
         parse_mode="Markdown",
         reply_markup=ReplyKeyboardRemove()
@@ -75,7 +75,7 @@ async def ask_contact(message: Message, state: FSMContext):
     if len(name.split()) < 2:
         await message.answer(
             "⚠️ *Xatolik:* Iltimos, ism va familiyangizni to'liq kiriting.\n\n"
-            "📌 Namuna: `Abdullayev Jasur`",
+            "📌 Namuna: `Jasur`",
             parse_mode="Markdown"
         )
         return
