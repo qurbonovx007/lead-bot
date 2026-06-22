@@ -8,7 +8,8 @@ from datetime import datetime
 from config import ADMIN_IDS, LEADS_CHAT_ID, BOT_ABOUT
 from database import (
     add_user_start, update_user_lead, get_stats, get_user,
-    get_all_leads, get_leads_count, clear_all_leads, export_leads_csv
+    get_all_leads, get_leads_count, clear_all_leads, export_leads_csv,
+    get_deleted_count
 )
 
 router = Router()
@@ -107,7 +108,7 @@ async def save_lead(message: Message, state: FSMContext, bot: Bot):
     now = datetime.now().strftime("%d.%m.%Y %H:%M")
     username_text = f"@{user.username}" if user.username else "Mavjud emas"
 
-    # Guruhga tushadigan ariza dizayni (Kengaytirilgan va chiroyli)
+    # Guruhga tushadigan ariza dizayni
     lead_message = (
         "⚡️ <b>YANGI ARIZA KELDI!</b>\n"
         "▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n\n"
@@ -183,6 +184,7 @@ async def show_period_stats(message: Message):
 
     period_key, period_label = period_map[message.text]
     stats = await get_stats(period_key)
+    deleted_count = await get_deleted_count()  # O'chirilganlarni bazadan olish
 
     total = stats["started"]
     completed = stats["completed"]
@@ -196,13 +198,14 @@ async def show_period_stats(message: Message):
     filled = int(conversion / 10)
     bar = "🟩" * filled + "⬜" * (10 - filled)
 
-    # Statistika dizayni yangilandi
+    # Dizaynga o'chirilganlar soni ham qo'shildi
     await message.answer(
         f"📈 *Statistika — {period_label}*\n"
         f"▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n\n"
         f"👥  */start* bosganlar:  *{total}* ta\n\n"
         f"✅  Ma'lumot qoldirganlar:  *{completed}* ta\n\n"
         f"❌  Yarimta tashlab ketganlar:  *{not_completed}* ta\n\n"
+        f"🗑  *O'chirilgan arizalar:* *{deleted_count}* ta\n\n"
         f"▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n"
         f"📊  *Konversiya ko'rsatkichi:* *{conversion}%*\n"
         f"{bar}",
@@ -226,7 +229,7 @@ async def show_leads(message: Message):
     total_pages = max(1, (total + per_page - 1) // per_page)
 
     if not leads:
-        await message.answer("📭 Hozircha bazada hech qanday arizalar mavjud emas.")
+        await message.answer("📭 Hozircha bazada hech qanday arizalar muzokarada emas.")
         return
 
     lines = [
