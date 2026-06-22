@@ -42,69 +42,73 @@ async def cmd_start(message: Message, state: FSMContext, bot: Bot):
         reply_markup=about_keyboard
     )
 
-# ===================== Ma'lumot qoldirish =====================
-@router.message(F.text == "📋 Ma'lumot qoldirish")
+# ===================== Ro'yxatdan o'tish =====================
+@router.message(F.text == "📝 Ro'yxatdan o'tish")
 async def ask_name(message: Message, state: FSMContext):
     await state.set_state(LeadForm.waiting_name)
-
-    await message.answer(
-        "📝 *Ism va familiyangizni kiriting:*\n\n"
-        "📌 Namuna: `Abdullayev Jasur`",
-        parse_mode="Markdown",
-        reply_markup=ReplyKeyboardRemove()
-    )
-
-# ===================== Ism qabul qilish =====================
+    await message.answer("Ismingizni kiriting:", reply_markup=ReplyKeyboardRemove())
+    
+## ===================== Ism qabul qilish =====================
 @router.message(LeadForm.waiting_name)
 async def ask_contact(message: Message, state: FSMContext):
-    name = message.text.strip()
-
-    if len(name.split()) < 2:
-        await message.answer(
-            "⚠️ Iltimos, *ism va familiyangizni* to'liq kiriting.\n\n"
-            "📌 Namuna: `Abdullayev Jasur`",
-            parse_mode="Markdown"
-        )
-        return
-
-    await state.update_data(full_name=name)
+    # Har qanday uzunlikdagi matnni qabul qilamiz
+    await state.update_data(full_name=message.text.strip())
     await state.set_state(LeadForm.waiting_contact)
 
     contact_keyboard = ReplyKeyboardMarkup(
-        keyboard=[
-            [KeyboardButton(text="📞 Kontaktni ulash", request_contact=True)]
-        ],
-        resize_keyboard=True,
-        one_time_keyboard=True
+        keyboard=[[KeyboardButton(text="📞 Kontaktni ulash", request_contact=True)]],
+        resize_keyboard=True
     )
-
-    await message.answer(
-        f"✅ Rahmat, *{name}*!\n\n"
-        "📱 Endi telefon raqamingizni ulang:\n"
-        "👇 Pastdagi tugmani bosing",
-        parse_mode="Markdown",
-        reply_markup=contact_keyboard
-    )
-
-# ===================== Kontakt qabul qilish =====================
-@router.message(LeadForm.waiting_contact, F.contact)
+    await message.answer("Endi telefon raqamingizni yuboring (yoki tugmani bosing):", reply_markup=contact_keyboard)
+    
+# ===================== Kontakt qabul qilish (Yangilangan) =====================
+@router.message(LeadForm.waiting_contact)
 async def save_lead(message: Message, state: FSMContext, bot: Bot):
+    phone = None
+    
+    # 1. Kontakt tugmasi bosilsa
+    if message.contact:
+        phone = message.contact.phone_number
+    
+    # 2. Foydalanuvchi raqamni matn ko'rinishida yozsa
+    elif message.text:
+        # Raqamni tozalash (faqat raqamlar qolishi uchun)
+        clean_phone = message.text.replace(' ', '').replace('+', '').replace('-', '')
+        
+        # Agar matn ichida harflar bo'lsa xato beradi
+        if not clean_phone.isdigit():
+            await message.answer("⚠️ Iltimos, faqat raqamlardan foydalaning.")
+            return
+        phone = message.text
+
+    # Agar na kontakt, na raqam bo'lsa (yoki xato bo'lsa)
+    if not phone:
+        contact_keyboard = ReplyKeyboardMarkup(
+            keyboard=[[KeyboardButton(text="📞 Kontaktni ulash", request_contact=True)]],
+            resize_keyboard=True, one_time_keyboard=True
+        )
+        await message.answer("⚠️ Iltimos, *tugmani bosib* yoki *telefon raqamingizni* yuboring.", 
+                             parse_mode="Markdown", reply_markup=contact_keyboard)
+        return
+
+    # Ma'lumotlarni bazaga saqlash
     data = await state.get_data()
     full_name = data.get("full_name")
-    phone = message.contact.phone_number
     user = message.from_user
 
     await update_user_lead(user.id, full_name, phone)
     await state.clear()
 
+    # Foydalanuvchiga javob
     await message.answer(
         "🎉 *Ma'lumotlaringiz muvaffaqiyatli qabul qilindi!*\n\n"
         "📞 Tez orada siz bilan bog'lanamiz.\n"
-        "Rahmat! 🙏",
+        "Rahmat!",
         parse_mode="Markdown",
         reply_markup=ReplyKeyboardRemove()
     )
 
+    # Adminlarga/Guruhga yuborish
     now = datetime.now().strftime("%d.%m.%Y %H:%M")
     username_text = f"@{user.username}" if user.username else "Username yoq"
 
@@ -127,7 +131,6 @@ async def save_lead(message: Message, state: FSMContext, bot: Bot):
                 await bot.send_message(admin_id, f"⚠️ Guruhga yuborishda xato: {e}")
             except:
                 pass
-
 # ===================== Kontakt o'rniga matn yuborsa =====================
 @router.message(LeadForm.waiting_contact)
 async def wrong_contact(message: Message):
