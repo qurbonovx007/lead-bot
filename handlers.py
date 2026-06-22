@@ -9,8 +9,7 @@ from datetime import datetime
 from config import ADMIN_IDS, LEADS_CHAT_ID
 from database import (
     add_user_start, update_user_lead, get_stats, get_user,
-    get_all_leads, get_leads_count, clear_all_leads, export_leads_csv,
-    get_deleted_count
+    get_all_leads, get_leads_count, clear_all_leads, export_leads_csv
 )
 
 router = Router()
@@ -46,7 +45,7 @@ async def cmd_start(message: Message, state: FSMContext, bot: Bot):
         "Maktabimiz IT, robototexnika, arab tili va ingliz tili yo‘nalishlariga ixtisoslashtirilgan.\n\n"
         "👨‍🏫 *Arab tili darslarini chet ellik malakali ustozlar olib boradilar.*\n\n"
         "🏆 Farzandingiz maktabni bitirmasdan turib IELTS, CEFR va SAT kabi sertifikatlardan yuqori ball "
-        "olish imkoniyatiga ega bo‘ladi, chunki bizda ushbu sertifikatlar uchun maxsus tayyorlov guruhlari ham mavjud.\n\n"
+        "olish imkoniyatiga ega bo‘ladi, chunki bizda ushbu sertifikatlar uchun maxsus tayyorlov guruhlari ham multivajud.\n\n"
         "🍽️ *Maktabda kun davomida 4 mahal ovqat beriladi.*\n\n"
         "✍️ Batafsil ma’lumot olish uchun ro‘yxatdan o'tish tugmasini bosing.",
         parse_mode="Markdown",
@@ -58,7 +57,7 @@ async def cmd_start(message: Message, state: FSMContext, bot: Bot):
 async def ask_name(message: Message, state: FSMContext):
     await state.set_state(LeadForm.waiting_name)
 
-    # Matn mutlaqo soddalashtirildi
+    # Faqat Ismingizni kiriting deb so'raydi, hech qanday ortiqcha gap yo'q
     await message.answer(
         "📝 *Ismingizni kiriting:*",
         parse_mode="Markdown",
@@ -70,7 +69,7 @@ async def ask_name(message: Message, state: FSMContext):
 async def ask_contact(message: Message, state: FSMContext):
     name = message.text.strip()
 
-    # Hech qanday cheklov yo'q — bitta harf bo'lsa ham qabul qiladi!
+    # Hech qanday split() yoki uzunlik tekshiruvi yo'q — har qanday matnni qabul qiladi!
     await state.update_data(full_name=name)
     await state.set_state(LeadForm.waiting_contact)
 
@@ -184,7 +183,6 @@ async def show_period_stats(message: Message):
 
     period_key, period_label = period_map[message.text]
     stats = await get_stats(period_key)
-    deleted_count = await get_deleted_count()
 
     total = stats["started"]
     completed = stats["completed"]
@@ -204,7 +202,6 @@ async def show_period_stats(message: Message):
         f"👥  */start* bosganlar:  *{total}* ta\n\n"
         f"✅  Ro'yxatdan o'tganlar:  *{completed}* ta\n\n"
         f"❌  Yarimta tashlab ketganlar:  *{not_completed}* ta\n\n"
-        f"🗑  *O'chirilgan arizalar:* *{deleted_count}* ta\n\n"
         f"▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n"
         f"📊  *Konversiya ko'rsatkichi:* *{conversion}%*\n"
         f"{bar}",
@@ -323,7 +320,7 @@ async def confirm_clear(message: Message, state: FSMContext):
 
     await message.answer(
         f"🗑 *Muvaffaqiyatli tozalandi!*\n\n"
-        f"Bazada mavjud bo'lgan *{deleted}* ta yozuv butunlay o'chirildi va statistika 0 ga tushirildi. ✅",
+        f"Bazada vaqtinchalik yozuvlar butunlay o'chirildi va statistika 0 ga tushirildi. ✅",
         parse_mode="Markdown",
         reply_markup=ReplyKeyboardRemove()
     )
