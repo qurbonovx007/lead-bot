@@ -333,27 +333,34 @@ async def handle_ai_chat(message: Message, bot: Bot):
     user_text = message.text.strip()
     
     # Tugmalar bo'lsa AI ishga tushmaydi
-    if user_text in ["📝 Ro'yxatdan o'tish", "📅 Kunlik", "📆 Haftalik", "🗓 Oylik", "📊 Umumiy", "✅ Ha, o'chiraman", "❌ Bekor qilish"]:
+    if user_text in [
+        "📝 Ro'yxatdan o'tish", "📅 Kunlik", "📆 Haftalik", 
+        "🗓 Oylik", "📊 Umumiy", "✅ Ha, o'chiraman", "❌ Bekor qilish"
+    ]:
         return
 
-    await bot.send_chat_action(chat_id=message.chat.id, action="typing")
-
     try:
+        # Bot "yozmoqda..." holatiga o'tadi
+        await bot.send_chat_action(chat_id=message.chat.id, action="typing")
+        
+        # Groq API orqali so'rov yuborish
         chat_completion = groq_client.chat.completions.create(
             messages=[
                 {"role": "system", "content": MAKTAB_MA'LUMOTLARI},
                 {"role": "user", "content": user_text}
             ],
-            model="llama3-8b-8192",
+            model="llama-3.3-70b-specdec",  # Eng so'nggi va barqaror Groq modeli
             temperature=0.4,
         )
         
         reply_text = chat_completion.choices[0].message.content
-        await message.answer(reply_text, parse_mode="Markdown")
+        await message.answer(reply_text)
         
     except Exception as e:
+        # Agar Groq ulanishida biron bir xato bo'lsa (masalan API key xato bo'lsa) standart javob:
+        print(f"Groq AI xatolik yuz berdi: {e}") # Logda ko'rish uchun
         await message.answer(
             "😊 Savolingiz uchun rahmat!\n\n"
             "Mudarris Xalqaro maktabi haqida batafsil ma'lumot olish yoki ro'yxatdan o'tish uchun "
-            "pastdagi tugmani bosing yoki operatorimiz bilan bog'laning: 📞 55-513-75-75."
+            "operatorimiz bilan bog'laning: 📞 55-513-75-75."
         )
