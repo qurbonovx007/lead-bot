@@ -1,4 +1,6 @@
 import aiosqlite
+import csv
+import io
 from datetime import datetime
 
 DB_PATH = "leads.db"
@@ -75,3 +77,54 @@ async def get_user(telegram_id: int):
             "SELECT * FROM users WHERE telegram_id = ?", (telegram_id,)
         )
         return await cursor.fetchone()
+
+# ============ YANGI FUNKSIYALAR ============
+
+async def get_all_leads(limit: int = 50, offset: int = 0) -> list:
+    """Barcha to'ldirilgan leadlarni qaytaradi (sahifalab)"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        cursor = await db.execute("""
+            SELECT telegram_id, username, full_name, phone, completed_at
+            FROM users
+            WHERE is_completed = 1
+            ORDER BY completed_at DESC
+            LIMIT ? OFFSET ?
+        """, (limit, offset))
+        rows = await cursor.fetchall()
+        return rows
+
+async def get_leads_count() -> int:
+    """Jami leadlar soni"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        cursor = await db.execute(
+            "SELECT COUNT(*) FROM users WHERE is_completed = 1"
+        )
+        return (await cursor.fetchone())[0]
+
+async def clear_all_leads() -> int:
+    """Barcha foydalanuvchilarni o'chiradi, o'chirilgan sonni qaytaradi"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        cursor = await db.execute("SELECT COUNT(*) FROM users")
+        count = (await cursor.fetchone())[0]
+        await db.execute("DELETE FROM users")
+        await db.commit()
+        return count
+
+async def export_leads_csv() -> bytes:
+    """Barcha leadlarni CSV formatida qaytaradi"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        cursor = await db.execute("""
+            SELECT telegram_id, username, full_name, phone, started_at, completed_at
+            FROM users
+            WHERE is_completed = 1
+            ORDER BY completed_at DESC
+        """)
+        rows = await cursor.fetchall()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Telegram ID", "Username", "Ism-Familiya", "Telefon", "Boshlagan vaqt", "Tugatgan vaqt"])
+    for row in rows:
+        writer.writerow(row)
+
+    return output.getvalue().encode("utf-8-sig")  # Excel uchun BOM
