@@ -58,10 +58,9 @@ async def cmd_start(message: Message, state: FSMContext, bot: Bot):
 async def ask_name(message: Message, state: FSMContext):
     await state.set_state(LeadForm.waiting_name)
 
-    # Bu yerdan namuna olib tashlandi
+    # Matn mutlaqo soddalashtirildi
     await message.answer(
-        "📝 *Ism va familiyangizni kiriting:*\n\n"
-        "ℹ️ _Iltimos, ism va familiyangizni to'liq kiriting._",
+        "📝 *Ismingizni kiriting:*",
         parse_mode="Markdown",
         reply_markup=ReplyKeyboardRemove()
     )
@@ -71,14 +70,7 @@ async def ask_name(message: Message, state: FSMContext):
 async def ask_contact(message: Message, state: FSMContext):
     name = message.text.strip()
 
-    if len(name.split()) < 2:
-        # Xatolik matnidan ham namuna olib tashlandi
-        await message.answer(
-            "⚠️ *Xatolik:* Iltimos, ism va familiyangizni to'liq (kamida 2 ta so'z) kiriting.",
-            parse_mode="Markdown"
-        )
-        return
-
+    # Hech qanday cheklov yo'q — bitta harf bo'lsa ham qabul qiladi!
     await state.update_data(full_name=name)
     await state.set_state(LeadForm.waiting_contact)
 
@@ -137,7 +129,7 @@ async def save_lead(message: Message, state: FSMContext, bot: Bot):
     lead_message = (
         "⚡️ <b>YANGI ARIZA KELDI!</b>\n"
         "▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n\n"
-        f"👤 <b>Foydalanuvchi:</b> {full_name}\n"
+        f"👤 <b>Ismi:</b> {full_name}\n"
         f"📞 <b>Telefon:</b> {phone}\n"
         f"🌐 <b>Username:</b> {username_text}\n"
         f"🆔 <b>Telegram ID:</b> <code>{user.id}</code>\n"
@@ -236,7 +228,7 @@ async def show_leads(message: Message):
     total_pages = max(1, (total + per_page - 1) // per_page)
 
     if not leads:
-        await message.answer("📭 Hozircha bazada hech qanday arizalar magazinlari mavjud emas.")
+        await message.answer("📭 Hozircha bazada hech qanday arizalar mavjud emas.")
         return
 
     lines = [
