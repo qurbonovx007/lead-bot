@@ -359,7 +359,7 @@ async def handle_ai_chat(message: Message):
         resize_keyboard=True
     )
 
-    try:
+  try:
         chat_completion = groq_client.chat.completions.create(
             messages=[
                 {"role": "system", "content": MAKTAB_DATA},
@@ -370,14 +370,13 @@ async def handle_ai_chat(message: Message):
         )
         
         reply_text = chat_completion.choices[0].message.content
-        # AI javobi bilan birga har doim doimiy tugmani ham birga qaytaramiz
         await message.answer(reply_text, reply_markup=reg_keyboard)
         
     except Exception as e:
         print(f"Groq AI xatolik yuz berdi: {e}")
         await message.answer(
-            "😊 Savolingiz uchun rahmat!\n\n"
-            "Mudarris Xalqaro maktabi haqida batafsil ma'lumot olish yoki ro'yxatdan o'tish uchun "
-            "operatorimiz bilan bog'laning: 📞 55-513-75-75.",
+            "😊 Mudarris Xalqaro maktabi virtual yordamchisiman!\n\n"
+            "Tizimda vaqtincha texnik yangilanish ketmoqda. Maktabimiz haqida batafsil ma'lumot olish yoki ro'yxatdan o'tish uchun "
+            "to'g'ridan-to'g'ri operatorimiz bilan bog'lanishingiz mumkin: 📞 55-513-75-75.",
             reply_markup=reg_keyboard
         )
