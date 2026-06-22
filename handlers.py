@@ -19,12 +19,12 @@ router = Router()
 # Groq mijozini Railway Variables ichidagi o'zgaruvchi orqali xavfsiz ishga tushiramiz
 groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
-# AI uchun mukammal va samimiy yo'riqnoma (Prompt)
+# AI uchun mukammal va tartibga solingan yo'riqnoma (Prompt)
 MAKTAB_DATA = """
 Siz "Mudarris Xalqaro maktabi"ning juda xushmuomala, samimiy va aqlli virtual yordamchisiz. 
 
-Sizning vazifalaringiz va muloqot qoidalaringiz:
-1. Agar foydalanuvchi salom bersa (masalan: "salom", "assalomu alaykum"), juda samimiy alik oling va maktab haqida qanday savollari borligini so'rang. (Masalan: "Vaalaykum assalom! Mudarris Xalqaro maktabi virtual yordamchisiman. Maktabimiz haqida qanday ma'lumotlar sizni qiziqtiryapti? 😊").
+Sizning vazifalaringiz va muloqot qoidalaringiz (DIQQAT BILAN RIOYA QILING):
+1. SALOMLASHISH QOIDASI: Agar foydalanuvchi muloqot boshida birinchi marta salom bersa (masalan: "salom", "assalomu alaykum"), juda samimiy alik oling va maktab haqida qanday savollari borligini so'rang. AGAR suhbat davomida foydalanuvchi salomlashmasdan to'g'ridan-to'g'ri savol bersa yoki ikkinchi marta murojaat qilayotgan bo'lsa, QAYTA SALOMLASHIB O'TIRMANG! Gapni "Vaalaykum assalom" yoki xush kelibsiz deb boshlamang, srazu savolning o'ziga aniq javob bering.
 2. Agar foydalanuvchi rahmat aytsa (masalan: "rahmat", "sog' bo'ling"), xursandchilik bilan javob qaytaring (Masalan: "Arziydi! Sizga va farzandingizga muvaffaqiyatlar tilayman! ✨").
 3. Maktab haqida savol berishsa, faqat quyidagi ma'lumotlarga tayanib qisqa va aniq javob bering:
    - Qabul: 0-sinfdan 11-sinfgacha bo'lgan o'quvchilar.
@@ -360,18 +360,17 @@ async def handle_ai_chat(message: Message):
     )
 
     try:
-# Ishlamayotgan model o'rniga hozirgi faol modelni qo'yamiz
+        # Barqaror ishlovchi Groq modeliga so'rov yuborish
         chat_completion = groq_client.chat.completions.create(
             messages=[
                 {"role": "system", "content": MAKTAB_DATA},
                 {"role": "user", "content": user_text}
             ],
-            model="llama-3.1-8b-instant",  # Model nomini aynan mana shunday o'zgartiring
-            temperature=0.5,
+            model="llama-3.1-8b-instant",
+            temperature=0.4,
         )
         
         reply_text = chat_completion.choices[0].message.content
-        # AI javobi bilan birga har doim doimiy tugmani ham birga qaytaramiz
         await message.answer(reply_text, reply_markup=reg_keyboard)
         
     except Exception as e:
