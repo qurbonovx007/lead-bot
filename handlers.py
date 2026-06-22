@@ -22,7 +22,7 @@ class LeadForm(StatesGroup):
 class ClearConfirm(StatesGroup):
     waiting_confirm = State()
 
-# Telefon raqamni tekshirish uchun Regex (O'zbekiston raqamlari uchun moslashuvchan)
+# Telefon raqamni tekshirish uchun Regex (Qo'lda yozganda filtrlash uchun)
 PHONE_REGEX = re.compile(r"^(\+?998)?\s?\(?\d{2}\)?\s?\d{3}\s?\d{2}\s?\d{2}$|^9\d{8}$")
 
 # ===================== /start =====================
@@ -35,7 +35,7 @@ async def cmd_start(message: Message, state: FSMContext, bot: Bot):
 
     about_keyboard = ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="📋 Ro'yhatdan o'tish")]
+            [KeyboardButton(text="📝 Ro'yxatdan o'tish")]
         ],
         resize_keyboard=True
     )
@@ -47,8 +47,8 @@ async def cmd_start(message: Message, state: FSMContext, bot: Bot):
         reply_markup=about_keyboard
     )
 
-# ===================== Ma'lumot qoldirish =====================
-@router.message(F.text == "📋 Ro'yhatdan o'tish")
+# ===================== Ro'yxatdan o'tish (Tugma o'zgardi) =====================
+@router.message(F.text == "📝 Ro'yxatdan o'tish")
 async def ask_name(message: Message, state: FSMContext):
     await state.set_state(LeadForm.waiting_name)
 
@@ -86,7 +86,7 @@ async def ask_contact(message: Message, state: FSMContext):
 
     await message.answer(
         f"🤝 *Rahmat, {name}!*\n\n"
-        "📱 Telefon raqamingizni pastdagi tugmani bosib yuboring yoki *o'zingiz qo'lda yozib qoldiring*:\n\n"
+        "📱 Telefon raqamingizni pastdagi tugmanib bosib yuboring yoki *o'zingiz qo'lda yozib qoldiring*:\n\n"
         "📌 Namuna: `+998901234567` yoki `901234567`",
         parse_mode="Markdown",
         reply_markup=contact_keyboard
@@ -101,18 +101,18 @@ async def save_lead(message: Message, state: FSMContext, bot: Bot):
     # 2. Agar qo'lda matn ko'rinishida yozilgan bo'lsa
     elif message.text:
         phone_input = message.text.strip()
-        # Raqam to'g'ri formatdaligini tekshiramiz
+        # Raqam to'g'ri formatdaligini tekshiramiz (bo'shliqlarni olib tashlab)
         if not PHONE_REGEX.match(phone_input.replace(" ", "")):
             await message.answer(
                 "⚠️ *Xato telefon raqam kiritildi!*\n\n"
-                "Iltimos, raqamni to'g'ri formatda kiriting yoki tugmadan foydalaning.\n"
+                "Iltimos, raqamni to'g'ri formatda kiriting yoki tugma orqali yuboring.\n"
                 "📌 Namuna: `+998901234567`",
                 parse_mode="Markdown"
             )
             return
         phone = phone_input
     else:
-        # Rasm yoki boshqa narsa yuborsa
+        # Rasm yoki stiker kabi boshqa narsalar yuborilsa rad etiladi
         return
 
     data = await state.get_data()
@@ -123,7 +123,7 @@ async def save_lead(message: Message, state: FSMContext, bot: Bot):
     await state.clear()
 
     await message.answer(
-        "🎉 *Rahmat! Ma'lumotlaringiz qabul qilindi.*\n\n"
+        "🎉 *Rahmat! Ro'yxatdan muvaffaqiyatli o'tdingiz.*\n\n"
         "📞 Yaqin orada mutaxassislarimiz siz bilan bog'lanishadi.",
         parse_mode="Markdown",
         reply_markup=ReplyKeyboardRemove()
@@ -132,7 +132,7 @@ async def save_lead(message: Message, state: FSMContext, bot: Bot):
     now = datetime.now().strftime("%d.%m.%Y %H:%M")
     username_text = f"@{user.username}" if user.username else "Mavjud emas"
 
-    # Guruhga boradigan ariza dizayni
+    # Guruhga tushadigan ariza formati
     lead_message = (
         "⚡️ <b>YANGI ARIZA KELDI!</b>\n"
         "▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n\n"
@@ -209,7 +209,7 @@ async def show_period_stats(message: Message):
         f"📈 *Statistika — {period_label}*\n"
         f"▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n\n"
         f"👥  */start* bosganlar:  *{total}* ta\n\n"
-        f"✅  Ma'lumot qoldirganlar:  *{completed}* ta\n\n"
+        f"✅  Ro'yxatdan o'tganlar:  *{completed}* ta\n\n"
         f"❌  Yarimta tashlab ketganlar:  *{not_completed}* ta\n\n"
         f"🗑  *O'chirilgan arizalar:* *{deleted_count}* ta\n\n"
         f"▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n"
@@ -297,7 +297,7 @@ async def clear_leads_cmd(message: Message, state: FSMContext):
 
     total = await get_leads_count()
     if total == 0:
-        await message.answer("📭 Tozalash uchun bazada ma'lumot magazini mavjud emas.")
+        await message.answer("📭 Tozalash uchun bazada ma'lumot mavjud emas.")
         return
 
     confirm_keyboard = ReplyKeyboardMarkup(
