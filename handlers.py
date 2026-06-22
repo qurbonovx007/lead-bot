@@ -36,7 +36,7 @@ async def cmd_start(message: Message, state: FSMContext, bot: Bot):
     )
 
     await message.answer(
-        f"👋 Assalomu alaykum, *{user.first_name}*!\n\n"
+        f"👋 *Assalomu alaykum, {user.first_name}!*\n\n"
         f"{BOT_ABOUT}",
         parse_mode="Markdown",
         reply_markup=about_keyboard
@@ -49,7 +49,8 @@ async def ask_name(message: Message, state: FSMContext):
 
     await message.answer(
         "📝 *Ism va familiyangizni kiriting:*\n\n"
-        "📌 Namuna: `Abdullayev Jasur`",
+        "📌 Namuna: `Abdullayev Jasur` \n\n"
+        "ℹ️ _Iltimos, ism va familiyangizni rasmda ko'rsatilgandek kiriting._",
         parse_mode="Markdown",
         reply_markup=ReplyKeyboardRemove()
     )
@@ -61,7 +62,7 @@ async def ask_contact(message: Message, state: FSMContext):
 
     if len(name.split()) < 2:
         await message.answer(
-            "⚠️ Iltimos, *ism va familiyangizni* to'liq kiriting.\n\n"
+            "⚠️ *Xatolik:* Iltimos, ism va familiyangizni to'liq kiriting.\n\n"
             "📌 Namuna: `Abdullayev Jasur`",
             parse_mode="Markdown"
         )
@@ -79,9 +80,8 @@ async def ask_contact(message: Message, state: FSMContext):
     )
 
     await message.answer(
-        f"✅ Rahmat, *{name}*!\n\n"
-        "📱 Endi telefon raqamingizni ulang:\n"
-        "👇 Pastdagi tugmani bosing",
+        f"🤝 *Rahmat, {name}!*\n\n"
+        "📱 Endi pastdagi tugmani bosish orqali *telefon raqamingizni* yuboring:",
         parse_mode="Markdown",
         reply_markup=contact_keyboard
     )
@@ -98,29 +98,29 @@ async def save_lead(message: Message, state: FSMContext, bot: Bot):
     await state.clear()
 
     await message.answer(
-        "🎉 *Ma'lumotlaringiz muvaffaqiyatli qabul qilindi!*\n\n"
-        "📞 Tez orada siz bilan bog'lanamiz.\n"
-        "Rahmat! 🙏",
+        "🎉 *Rahmat! Ma'lumotlaringiz qabul qilindi.*\n\n"
+        "📞 Yaqin orada mutaxassislarimiz siz bilan bog'lanishadi.",
         parse_mode="Markdown",
         reply_markup=ReplyKeyboardRemove()
     )
 
     now = datetime.now().strftime("%d.%m.%Y %H:%M")
-    username_text = f"@{user.username}" if user.username else "Username yoq"
+    username_text = f"@{user.username}" if user.username else "Mavjud emas"
 
+    # Guruhga tushadigan ariza dizayni (Kengaytirilgan va chiroyli)
     lead_message = (
-        "🔔 YANGI LEAD!\n"
-        "━━━━━━━━━━━━━━━\n"
-        f"👤 Ism-Familiya: {full_name}\n"
-        f"📞 Telefon: {phone}\n"
-        f"🆔 Username: {username_text}\n"
-        f"🔗 Telegram ID: {user.id}\n"
-        f"🕐 Vaqt: {now}\n"
-        "━━━━━━━━━━━━━━━"
+        "⚡️ <b>YANGI ARIZA KELDI!</b>\n"
+        "▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n\n"
+        f"👤 <b>Foydalanuvchi:</b> {full_name}\n"
+        f"📞 <b>Telefon:</b> {phone}\n"
+        f"🌐 <b>Username:</b> {username_text}\n"
+        f"🆔 <b>Telegram ID:</b> <code>{user.id}</code>\n"
+        f"🕒 <b>Vaqt:</b> {now}\n\n"
+        "▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬"
     )
 
     try:
-        await bot.send_message(chat_id=LEADS_CHAT_ID, text=lead_message)
+        await bot.send_message(chat_id=LEADS_CHAT_ID, text=lead_message, parse_mode="HTML")
     except Exception as e:
         for admin_id in ADMIN_IDS:
             try:
@@ -139,7 +139,8 @@ async def wrong_contact(message: Message):
         one_time_keyboard=True
     )
     await message.answer(
-        "⚠️ Iltimos, *tugmani bosib* kontaktingizni yuboring.",
+        "⚠️ *Iltimos, faqat pastdagi tugmani bosing!*\n\n"
+        "Telefon raqamni qo'lda yozib yuborish mumkin emas.",
         parse_mode="Markdown",
         reply_markup=contact_keyboard
     )
@@ -160,7 +161,9 @@ async def show_stats(message: Message):
     )
 
     await message.answer(
-        "📊 *Statistika paneli*\n\nQaysi davrni ko'rishni xohlaysiz?",
+        "📊 *Statistika boshqaruv paneli*\n\n"
+        "Qaysi davr bo'yicha hisobotlarni ko'rishni istaysiz? \n"
+        "Pastdagi tugmalardan birini tanlang:",
         parse_mode="Markdown",
         reply_markup=stats_keyboard
     )
@@ -193,14 +196,15 @@ async def show_period_stats(message: Message):
     filled = int(conversion / 10)
     bar = "🟩" * filled + "⬜" * (10 - filled)
 
+    # Statistika dizaynini yangilash (Yopishib qolishi bartaraf etildi)
     await message.answer(
-        f"📊 *Statistika — {period_label}*\n"
-        "━━━━━━━━━━━━━━━\n"
-        f"👥 /start bosganlar: *{total}* ta\n"
-        f"✅ Ma'lumot qoldirganlar: *{completed}* ta\n"
-        f"❌ Qoldirmaganlar: *{not_completed}* ta\n"
-        "━━━━━━━━━━━━━━━\n"
-        f"📈 Konversiya: *{conversion}%*\n"
+        f"📈 *Statistika — {period_label}*\n"
+        f"▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n\n"
+        f"👥  */start* bosganlar:  *{total}* ta\n\n"
+        f"✅  Ma'lumot qoldirganlar:  *{completed}* ta\n\n"
+        f"❌  Yarimta tashlab ketganlar:  *{not_completed}* ta\n\n"
+        f"▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n"
+        f"📊  *Konversiya ko'rsatkichi:* *{conversion}%*\n"
         f"{bar}",
         parse_mode="Markdown"
     )
@@ -212,7 +216,6 @@ async def show_leads(message: Message):
         await message.answer("❌ Sizda bu buyruq uchun ruxsat yo'q.")
         return
 
-    # Sahifa: /leads yoki /leads 2
     args = message.text.split()
     page = int(args[1]) if len(args) > 1 and args[1].isdigit() else 1
     per_page = 10
@@ -223,19 +226,23 @@ async def show_leads(message: Message):
     total_pages = max(1, (total + per_page - 1) // per_page)
 
     if not leads:
-        await message.answer("📭 Hozircha hech qanday lead yo'q.")
+        await message.answer("📭 Hozircha bazada hech qanday arizalar mavjud emas.")
         return
 
-    lines = [f"📋 *Leadlar ro'yxati* (sahifa {page}/{total_pages}, jami: {total})\n━━━━━━━━━━━━━━━"]
+    lines = [
+        f"📋 *Kelib tushgan ariza leadlari*\n"
+        f"_(Sahifa {page}/{total_pages} | Jami: {total} ta)_\n"
+        f"▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬"
+    ]
 
     for i, (tg_id, username, full_name, phone, completed_at) in enumerate(leads, start=offset + 1):
-        uname = f"@{username}" if username else "—"
+        uname = f"@{username}" if username else "yo'q"
         date_str = completed_at[:10] if completed_at else "—"
         lines.append(
-            f"\n*{i}.* {full_name}\n"
-            f"   📞 `{phone}`\n"
-            f"   🆔 {uname} | `{tg_id}`\n"
-            f"   📅 {date_str}"
+            f"\n* {i}. {full_name}*\n"
+            f"   ▫️ Telefon: `{phone}`\n"
+            f"   ▫️ Profil: {uname} | `{tg_id}`\n"
+            f"   ▫️ Sana: _{date_str}_"
         )
 
     if total_pages > 1:
@@ -244,7 +251,7 @@ async def show_leads(message: Message):
             nav.append(f"◀️ `/leads {page - 1}`")
         if page < total_pages:
             nav.append(f"`/leads {page + 1}` ▶️")
-        lines.append("\n━━━━━━━━━━━━━━━\n" + "   ".join(nav))
+        lines.append("\n▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n" + "   ".join(nav))
 
     await message.answer("\n".join(lines), parse_mode="Markdown")
 
@@ -257,10 +264,10 @@ async def export_leads(message: Message, bot: Bot):
 
     total = await get_leads_count()
     if total == 0:
-        await message.answer("📭 Eksport uchun lead yo'q.")
+        await message.answer("📭 Eksport qilish uchun hech qanday ma'lumot yo'q.")
         return
 
-    await message.answer("⏳ CSV tayyorlanmoqda...")
+    await message.answer("⏳ *Excel (CSV) fayl shakllantirilmoqda, iltimos kuting...*")
 
     csv_bytes = await export_leads_csv()
     filename = f"leads_{datetime.now().strftime('%Y%m%d_%H%M')}.csv"
@@ -268,7 +275,7 @@ async def export_leads(message: Message, bot: Bot):
     await bot.send_document(
         chat_id=message.chat.id,
         document=BufferedInputFile(csv_bytes, filename=filename),
-        caption=f"📊 Jami *{total}* ta lead eksport qilindi.",
+        caption=f"📊 *Eksport yakunlandi!*\n\nJami *{total}* ta lead ma'lumotlari Excel faylga yuklandi.",
         parse_mode="Markdown"
     )
 
@@ -281,7 +288,7 @@ async def clear_leads_cmd(message: Message, state: FSMContext):
 
     total = await get_leads_count()
     if total == 0:
-        await message.answer("📭 O'chirish uchun lead yo'q.")
+        await message.answer("📭 Tozalash uchun bazada ma'lumot mavjud emas.")
         return
 
     confirm_keyboard = ReplyKeyboardMarkup(
@@ -294,10 +301,11 @@ async def clear_leads_cmd(message: Message, state: FSMContext):
 
     await state.set_state(ClearConfirm.waiting_confirm)
     await message.answer(
-        f"⚠️ *Diqqat!*\n\n"
-        f"Bazada *{total}* ta yozuv bor.\n"
-        f"Barchasini o'chirishni tasdiqlaysizmi?\n\n"
-        f"_Bu amalni qaytarib bo'lmaydi!_",
+        f"⚠️ *DIQQAT! JIDDIY OGOHLANTIRISH*\n"
+        f"▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n\n"
+        f"Bazada jami *{total}* ta foydalanuvchi ma'lumotlari mavjud.\n\n"
+        f"Haqiqatdan ham hammasini o'chirib, statistikani *0* ga tushirmoqchimisiz?\n\n"
+        f"ℹ️ _Ushbu amalni ortga qaytarib bo'lmaydi!_",
         parse_mode="Markdown",
         reply_markup=confirm_keyboard
     )
@@ -312,8 +320,8 @@ async def confirm_clear(message: Message, state: FSMContext):
     await state.clear()
 
     await message.answer(
-        f"🗑 *{deleted}* ta yozuv o'chirildi.*\n\n"
-        f"Baza tozalandi ✅",
+        f"🗑 *Muvaffaqiyatli tozalandi!*\n\n"
+        f"Bazada mavjud bo'lgan *{deleted}* ta yozuv butunlay o'chirildi va statistika 0 ga tushirildi. ✅",
         parse_mode="Markdown",
         reply_markup=ReplyKeyboardRemove()
     )
@@ -322,10 +330,11 @@ async def confirm_clear(message: Message, state: FSMContext):
 async def cancel_clear(message: Message, state: FSMContext):
     await state.clear()
     await message.answer(
-        "✅ Bekor qilindi. Baza o'zgarishsiz qoldi.",
+        "✅ *Bekor qilindi.* Ma'lumotlar bazasi o'zgarishsiz qoldirildi.",
+        parse_mode="Markdown",
         reply_markup=ReplyKeyboardRemove()
     )
 
 @router.message(ClearConfirm.waiting_confirm)
 async def clear_wrong_input(message: Message):
-    await message.answer("⚠️ Iltimos, tugmani bosing.")
+    await message.answer("⚠️ Iltimos, faqat taqdim etilgan tugmalardan birini bosing.")
