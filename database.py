@@ -7,7 +7,7 @@ DB_PATH = "leads.db"
 
 async def init_db():
     async with aiosqlite.connect(DB_PATH) as db:
-        # Foydalanuvchilar jadvali
+        # 1. Foydalanuvchilar jadvali
         await db.execute("""
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -20,14 +20,16 @@ async def init_db():
                 is_completed INTEGER DEFAULT 0
             )
         """)
-        # O'chirilganlar statistikasini saqlash uchun jadval
+        
+        # 2. O'chirilganlar statistikasini saqlash uchun yangi jadval
         await db.execute("""
             CREATE TABLE IF NOT EXISTS deleted_stats (
                 key TEXT PRIMARY KEY,
                 count INTEGER DEFAULT 0
             )
         """)
-        # Agar hisoblagich mavjud bo'lmasa, 0 qiymat bilan yaratamiz
+        
+        # Hisoblagich dastlab mavjud bo'lmasa, 0 qiymat bilan yaratib qo'yamiz
         await db.execute("""
             INSERT OR IGNORE INTO deleted_stats (key, count) VALUES ('total_deleted', 0)
         """)
@@ -113,23 +115,23 @@ async def get_leads_count() -> int:
         return (await cursor.fetchone())[0]
 
 async def get_deleted_count() -> int:
-    """O'chirilgan arizalar umumiy sonini olish"""
-    async with aiosqlite.connect(DB_PATH) as db:
-        cursor = await db.execute("SELECT count FROM deleted_stats WHERE key = 'total_deleted'")
-        row = await cursor.fetchone()
-        return row[0] if row else 0
+    """O'chirilgan arizalar umumiy sonini xavfsiz olish"""
+    try:
+        async with aiosqlite.connect(DB_PATH) as db:
+            cursor = await db.execute("SELECT count FROM deleted_stats WHERE key = 'total_deleted'")
+            row = await cursor.fetchone()
+            return row[0] if row else 0
+    except Exception:
+        return 0
 
 async def clear_all_leads() -> int:
     """Barcha arizalarni o'chiradi va o'chirilganlar sonini hisoblagichga qo'shadi"""
     async with aiosqlite.connect(DB_PATH) as db:
-        # Faqat to'liq yakunlangan leadlar (arizalar) sonini olamiz
         cursor = await db.execute("SELECT COUNT(*) FROM users WHERE is_completed = 1")
         completed_count = (await cursor.fetchone())[0]
         
-        # Barcha foydalanuvchilarni o'chiramiz
         await db.execute("DELETE FROM users")
         
-        # O'chirilgan arizalar sonini doimiy hisoblagichga qo'shamiz
         await db.execute("""
             UPDATE deleted_stats 
             SET count = count + ? 
