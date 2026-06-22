@@ -50,7 +50,7 @@ async def ask_name(message: Message, state: FSMContext):
     await message.answer(
         "📝 *Ism va familiyangizni kiriting:*\n\n"
         "📌 Namuna: `Abdullayev Jasur` \n\n"
-        "ℹ️ _Iltimos, ism va familiyangizni rasmda ko'rsatilgandek kiriting._",
+        "ℹ️ _Iltimos, ism va familiyangizni to'liq kiriting._",
         parse_mode="Markdown",
         reply_markup=ReplyKeyboardRemove()
     )
@@ -196,7 +196,7 @@ async def show_period_stats(message: Message):
     filled = int(conversion / 10)
     bar = "🟩" * filled + "⬜" * (10 - filled)
 
-    # Statistika dizaynini yangilash (Yopishib qolishi bartaraf etildi)
+    # Statistika dizayni yangilandi
     await message.answer(
         f"📈 *Statistika — {period_label}*\n"
         f"▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n\n"
