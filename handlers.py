@@ -32,32 +32,48 @@ async def cmd_start(message: Message, state: FSMContext, bot: Bot):
     user = message.from_user
     await add_user_start(user.id, user.username or "")
 
-    about_keyboard = ReplyKeyboardMarkup(
-        keyboard=[
-            [KeyboardButton(text="📝 Ro'yxatdan o'tish")]
-        ],
-        resize_keyboard=True
-    )
+    # Link ichidagi argumentni tekshiramiz (masalan: /start reg)
+    args = message.text.split()
+    is_direct_reg = len(args) > 1 and args[1] == "reg"
 
-    await message.answer(
+    # Uzun maktab matni
+    about_text = (
         "😊 *Assalomu alaykum!*\n\n"
         "Mudarris Xalqaro maktabi 0-sinfdan 11-sinfgacha bo‘lgan o‘quvchilarni qabul qiladi. "
         "Maktabimiz IT, robototexnika, arab tili va ingliz tili yo‘nalishlariga ixtisoslashtirilgan.\n\n"
         "👨‍🏫 *Arab tili darslarini chet ellik malakali ustozlar olib boradilar.*\n\n"
         "🏆 Farzandingiz maktabni bitirmasdan turib IELTS, CEFR va SAT kabi sertifikatlardan yuqori ball "
-        "olish imkoniyatiga ega bo‘ladi, chunki bizda ushbu sertifikatlar uchun maxsus tayyorlov guruhlari ham multivajud.\n\n"
+        "olish imkoniyatiga ega bo‘ladi, chunki bizda ushbu sertifikatlar uchun maxsus tayyorlov guruhlari ham mavjud.\n\n"
         "🍽️ *Maktabda kun davomida 4 mahal ovqat beriladi.*\n\n"
-        "✍️ Batafsil ma’lumot olish uchun ro‘yxatdan o'tish tugmasini bosing.",
-        parse_mode="Markdown",
-        reply_markup=about_keyboard
+        "✍️ Batafsil ma’lumot olish uchun ro‘yxatdan o'tish tugmasini bosing."
     )
 
-# ===================== Ro'yxatdan o'tish =====================
+    if is_direct_reg:
+        # 1. Agar reklama linkidan kirgan bo'lsa: Uzun matnni yuboramiz
+        await message.answer(about_text, parse_mode="Markdown", reply_markup=ReplyKeyboardRemove())
+        
+        # 2. Hech qanday tugmani kutmasdan, darhol keyingi bosqich (ism so'rash) holatiga o'tamiz
+        await state.set_state(LeadForm.waiting_name)
+        
+        # 3. Ketidan ism so'rash matnini yuboramiz
+        await message.answer(
+            "📝 *Ismingizni kiriting:*",
+            parse_mode="Markdown"
+        )
+    else:
+        # Agar oddiy qidiruvdan kirgan bo'lsa, pastda "Ro'yxatdan o'tish" tugmasi chiqadi
+        about_keyboard = ReplyKeyboardMarkup(
+            keyboard=[
+                [KeyboardButton(text="📝 Ro'yxatdan o'tish")]
+            ],
+            resize_keyboard=True
+        )
+        await message.answer(about_text, parse_mode="Markdown", reply_markup=about_keyboard)
+
+# ===================== Ro'yxatdan o'tish (Oddiy kirganlar uchun) =====================
 @router.message(F.text == "📝 Ro'yxatdan o'tish")
 async def ask_name(message: Message, state: FSMContext):
     await state.set_state(LeadForm.waiting_name)
-
-    # Faqat Ismingizni kiriting deb so'raydi, hech qanday ortiqcha gap yo'q
     await message.answer(
         "📝 *Ismingizni kiriting:*",
         parse_mode="Markdown",
@@ -69,7 +85,7 @@ async def ask_name(message: Message, state: FSMContext):
 async def ask_contact(message: Message, state: FSMContext):
     name = message.text.strip()
 
-    # Hech qanday split() yoki uzunlik tekshiruvi yo'q — har qanday matnni qabul qiladi!
+    # Har qanday kiritilgan matnni (bitta harf bo'lsa ham) cheklovsiz qabul qiladi
     await state.update_data(full_name=name)
     await state.set_state(LeadForm.waiting_contact)
 
@@ -118,7 +134,6 @@ async def save_lead(message: Message, state: FSMContext, bot: Bot):
     await message.answer(
         "🎉 *Rahmat! Ro'yxatdan muvaffaqiyatli o'tdingiz.*\n\n"
         "📞 Yaqin orada mutaxassislarimiz siz bilan bog'lanishadi.",
-        parse_mode="Markdown",
         reply_markup=ReplyKeyboardRemove()
     )
 
@@ -141,7 +156,14 @@ async def save_lead(message: Message, state: FSMContext, bot: Bot):
     except Exception as e:
         for admin_id in ADMIN_IDS:
             try:
-                await bot.send_message(admin_id, f"⚠️ Guruhga yuborishda xato: {e}")
+                await bot.send_message(
+                    chat_id=admin_id, 
+                    text=f"⚠️ <b>Guruhga ariza yuborishda xatolik!</b>\n\n"
+                         f"Xato turi: <code>{e}</code>\n"
+                         f"Kiritilgan Guruh ID: <code>{LEADS_CHAT_ID}</code>\n\n"
+                         f"<i>Iltimos, Railway panelida LEADS_CHAT_ID o'zgaruvchisini va bot guruhda admin ekanligini tekshiring!</i>",
+                    parse_mode="HTML"
+                )
             except:
                 pass
 
