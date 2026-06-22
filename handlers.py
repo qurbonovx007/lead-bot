@@ -16,8 +16,8 @@ from database import (
 
 router = Router()
 
-# Groq mijozini Railway'dagi GROQ_API_KEY orqali ishga tushiramiz
-groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+# Groq mijozini to'g'ridan-to'g'ri yangi kalit bilan ishga tushiramiz
+groq_client = Groq(api_key="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")
 
 # AI uchun mukammal va samimiy yo'riqnoma (Prompt)
 MAKTAB_DATA = """
