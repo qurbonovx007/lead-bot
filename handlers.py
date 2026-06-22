@@ -6,7 +6,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from datetime import datetime
 
-from config import ADMIN_IDS, LEADS_CHAT_ID, BOT_ABOUT
+from config import ADMIN_IDS, LEADS_CHAT_ID
 from database import (
     add_user_start, update_user_lead, get_stats, get_user,
     get_all_leads, get_leads_count, clear_all_leads, export_leads_csv,
@@ -22,7 +22,7 @@ class LeadForm(StatesGroup):
 class ClearConfirm(StatesGroup):
     waiting_confirm = State()
 
-# Telefon raqamni tekshirish uchun Regex (Qo'lda yozganda filtrlash uchun)
+# Telefon raqamni tekshirish uchun Regex
 PHONE_REGEX = re.compile(r"^(\+?998)?\s?\(?\d{2}\)?\s?\d{3}\s?\d{2}\s?\d{2}$|^9\d{8}$")
 
 # ===================== /start =====================
@@ -40,14 +40,21 @@ async def cmd_start(message: Message, state: FSMContext, bot: Bot):
         resize_keyboard=True
     )
 
+    # Siz bergan yangi maktab haqidagi matn qo'yildi
     await message.answer(
-        f"👋 *Assalomu alaykum, {user.first_name}!*\n\n"
-        f"{BOT_ABOUT}",
+        "😊 *Assalomu alaykum!*\n\n"
+        "Mudarris Xalqaro maktabi 0-sinfdan 11-sinfgacha bo‘lgan o‘quvchilarni qabul qiladi. "
+        "Maktabimiz IT, robototexnika, arab tili va ingliz tili yo‘nalishlariga ixtisoslashtirilgan.\n\n"
+        "👨‍🏫 *Arab tili darslarini chet ellik malakali ustozlar olib boradilar.*\n\n"
+        "🏆 Farzandingiz maktabni bitirmasdan turib IELTS, CEFR va SAT kabi sertifikatlardan yuqori ball "
+        "olish imkoniyatiga ega bo‘ladi, chunki bizda ushbu sertifikatlar uchun maxsus tayyorlov guruhlari ham mavjud.\n\n"
+        "🍽️ *Maktabda kun davomida 4 mahal ovqat beriladi.*\n\n"
+        "✍️ Batafsil ma’lumot olish uchun ro‘yxatdan o'tish tugmasini bosing.",
         parse_mode="Markdown",
         reply_markup=about_keyboard
     )
 
-# ===================== Ro'yxatdan o'tish (Tugma o'zgardi) =====================
+# ===================== Ro'yxatdan o'tish =====================
 @router.message(F.text == "📝 Ro'yxatdan o'tish")
 async def ask_name(message: Message, state: FSMContext):
     await state.set_state(LeadForm.waiting_name)
@@ -86,22 +93,19 @@ async def ask_contact(message: Message, state: FSMContext):
 
     await message.answer(
         f"🤝 *Rahmat, {name}!*\n\n"
-        "📱 Telefon raqamingizni pastdagi tugmanib bosib yuboring yoki *o'zingiz qo'lda yozib qoldiring*:\n\n"
+        "📱 Telefon raqamingizni pastdagi tugmani bosib yuboring yoki *o'zingiz qo'lda yozib qoldiring*:\n\n"
         "📌 Namuna: `+998901234567` yoki `901234567`",
         parse_mode="Markdown",
         reply_markup=contact_keyboard
     )
 
-# ===================== Kontakt qabul qilish (Tugma yoki Matn orqali) =====================
+# ===================== Kontakt qabul qilish =====================
 @router.message(LeadForm.waiting_contact)
 async def save_lead(message: Message, state: FSMContext, bot: Bot):
-    # 1. Agar tugma orqali kontakt yuborilgan bo'lsa
     if message.contact:
         phone = message.contact.phone_number
-    # 2. Agar qo'lda matn ko'rinishida yozilgan bo'lsa
     elif message.text:
         phone_input = message.text.strip()
-        # Raqam to'g'ri formatdaligini tekshiramiz (bo'shliqlarni olib tashlab)
         if not PHONE_REGEX.match(phone_input.replace(" ", "")):
             await message.answer(
                 "⚠️ *Xato telefon raqam kiritildi!*\n\n"
@@ -112,7 +116,6 @@ async def save_lead(message: Message, state: FSMContext, bot: Bot):
             return
         phone = phone_input
     else:
-        # Rasm yoki stiker kabi boshqa narsalar yuborilsa rad etiladi
         return
 
     data = await state.get_data()
@@ -132,7 +135,7 @@ async def save_lead(message: Message, state: FSMContext, bot: Bot):
     now = datetime.now().strftime("%d.%m.%Y %H:%M")
     username_text = f"@{user.username}" if user.username else "Mavjud emas"
 
-    # Guruhga tushadigan ariza formati
+    # Guruhga boradigan ariza dizayni
     lead_message = (
         "⚡️ <b>YANGI ARIZA KELDI!</b>\n"
         "▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n\n"
