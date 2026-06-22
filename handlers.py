@@ -35,7 +35,7 @@ async def cmd_start(message: Message, state: FSMContext, bot: Bot):
 
     about_keyboard = ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="📋 Ma'lumot qoldirish")]
+            [KeyboardButton(text="📋 Ro'yhatdan o'tish")]
         ],
         resize_keyboard=True
     )
@@ -48,7 +48,7 @@ async def cmd_start(message: Message, state: FSMContext, bot: Bot):
     )
 
 # ===================== Ma'lumot qoldirish =====================
-@router.message(F.text == "📋 Ro'yhatdan o'tish")
+@router.message(F.text == "📋 Ma'lumot qoldirish")
 async def ask_name(message: Message, state: FSMContext):
     await state.set_state(LeadForm.waiting_name)
 
