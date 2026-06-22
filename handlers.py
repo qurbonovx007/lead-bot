@@ -40,7 +40,6 @@ async def cmd_start(message: Message, state: FSMContext, bot: Bot):
         resize_keyboard=True
     )
 
-    # Siz bergan yangi maktab haqidagi matn qo'yildi
     await message.answer(
         "😊 *Assalomu alaykum!*\n\n"
         "Mudarris Xalqaro maktabi 0-sinfdan 11-sinfgacha bo‘lgan o‘quvchilarni qabul qiladi. "
@@ -59,9 +58,9 @@ async def cmd_start(message: Message, state: FSMContext, bot: Bot):
 async def ask_name(message: Message, state: FSMContext):
     await state.set_state(LeadForm.waiting_name)
 
+    # Bu yerdan namuna olib tashlandi
     await message.answer(
         "📝 *Ism va familiyangizni kiriting:*\n\n"
-        "📌 Namuna: `Jasur` \n\n"
         "ℹ️ _Iltimos, ism va familiyangizni to'liq kiriting._",
         parse_mode="Markdown",
         reply_markup=ReplyKeyboardRemove()
@@ -73,9 +72,9 @@ async def ask_contact(message: Message, state: FSMContext):
     name = message.text.strip()
 
     if len(name.split()) < 2:
+        # Xatolik matnidan ham namuna olib tashlandi
         await message.answer(
-            "⚠️ *Xatolik:* Iltimos, ism va familiyangizni to'liq kiriting.\n\n"
-            "📌 Namuna: `Jasur`",
+            "⚠️ *Xatolik:* Iltimos, ism va familiyangizni to'liq (kamida 2 ta so'z) kiriting.",
             parse_mode="Markdown"
         )
         return
@@ -135,7 +134,6 @@ async def save_lead(message: Message, state: FSMContext, bot: Bot):
     now = datetime.now().strftime("%d.%m.%Y %H:%M")
     username_text = f"@{user.username}" if user.username else "Mavjud emas"
 
-    # Guruhga boradigan ariza dizayni
     lead_message = (
         "⚡️ <b>YANGI ARIZA KELDI!</b>\n"
         "▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n\n"
@@ -238,7 +236,7 @@ async def show_leads(message: Message):
     total_pages = max(1, (total + per_page - 1) // per_page)
 
     if not leads:
-        await message.answer("📭 Hozircha bazada hech qanday arizalar mavjud emas.")
+        await message.answer("📭 Hozircha bazada hech qanday arizalar magazinlari mavjud emas.")
         return
 
     lines = [
