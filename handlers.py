@@ -16,8 +16,8 @@ from database import (
 
 router = Router()
 
-# Groq mijozini to'g'ridan-to'g'ri yangi kalit bilan ishga tushiramiz
-groq_client = Groq(api_key="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")
+# Groq mijozini Railway Variables ichidagi o'zgaruvchi orqali xavfsiz ishga tushiramiz
+groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 # AI uchun mukammal va samimiy yo'riqnoma (Prompt)
 MAKTAB_DATA = """
@@ -342,8 +342,8 @@ async def cancel_clear(message: Message, state: FSMContext):
 @router.message(F.text)
 async def handle_ai_chat(message: Message):
     user_text = message.text.strip()
-
-    # Belgilangan menyu tugmalari bosilganda AI ishlamaydi
+    
+    # Belgilangan menyu tugmalari bosilganda AI ishlamaydi, o'z zanjiri ishlaydi
     if user_text in ["📝 Ro'yxatdan o'tish", "📅 Kunlik", "📆 Haftalik", "🗓 Oylik", "📊 Umumiy", "✅ Ha, o'chiraman", "❌ Bekor qilish"]:
         return
 
@@ -360,6 +360,7 @@ async def handle_ai_chat(message: Message):
     )
 
     try:
+        # Groq asinxron emas, sinxron funksiyalari orqali murojaat qilamiz
         chat_completion = groq_client.chat.completions.create(
             messages=[
                 {"role": "system", "content": MAKTAB_DATA},
@@ -368,8 +369,11 @@ async def handle_ai_chat(message: Message):
             model="llama-3.3-70b-specdec",
             temperature=0.5,
         )
+        
         reply_text = chat_completion.choices[0].message.content
+        # AI javobi bilan birga har doim doimiy tugmani ham birga qaytaramiz
         await message.answer(reply_text, reply_markup=reg_keyboard)
+        
     except Exception as e:
         print(f"Groq AI xatolik yuz berdi: {e}")
         await message.answer(
