@@ -360,13 +360,13 @@ async def handle_ai_chat(message: Message):
     )
 
     try:
-# Modelni yengilroq va mutlaqo bepul versiyaga o'zgartiramiz
+# Ishlamayotgan model o'rniga hozirgi faol modelni qo'yamiz
         chat_completion = groq_client.chat.completions.create(
             messages=[
                 {"role": "system", "content": MAKTAB_DATA},
                 {"role": "user", "content": user_text}
             ],
-            model="llama3-8b-8192",  # Shu qatorni yangilang
+            model="llama-3.1-8b-instant",  # Model nomini aynan mana shunday o'zgartiring
             temperature=0.5,
         )
         
