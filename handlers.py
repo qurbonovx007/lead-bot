@@ -22,20 +22,21 @@ groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 # AI uchun mukammal va tartibga solingan yo'riqnoma (Prompt)
 MAKTAB_DATA = """
 Sen "Mudarris Xalqaro maktabi"ning yordamchisisan.
-MAKTAB HAQIDA FAKTLAR:
+Sening vazifang - savollarga qisqa va aniq javob berish.
+
+MAKTAB MA'LUMOTLARI:
 - Nomi: Mudarris Xalqaro maktabi.
 - Qabul: 0-11 sinf.
-- Fanlar: IT, robototexnika, arab tili (chet ellik ustozlar), ingliz tili.
+- Fanlar: IT, robototexnika, arab tili, ingliz tili.
 - Sertifikatlar: IELTS, CEFR, SAT tayyorlov guruhlari mavjud.
-- Sharoit: Kuniga 4 mahal issiq ovqat.
+- Sharoit: 4 mahal issiq ovqat.
 - Filiallar: Sergeli, Qo'yliq, Katta Qa'ni.
 - Telefon: 55-513-75-75.
 
 QOIDALAR:
-1. Agar foydalanuvchi "salom" desa: "Assalomu alaykum! Men Mudarris Xalqaro maktabi virtual yordamchisiman. Savollaringiz bormi?" deb javob ber.
-2. Agar foydalanuvchi maktab nomi haqida so'rasa: "Maktabimiz nomi - Mudarris Xalqaro maktabi" deb javob ber.
-3. Boshqa barcha savollarda: Salomlashma, to'g'ridan-to'g'ri so'ralgan ma'lumotni yuqoridagi ro'yxatdan olib qisqa javob ber.
-4. Javobingni hech qachon takrorlama.
+1. Agar foydalanuvchi "salom", "assalom" desa: "Assalomu alaykum! Mudarris Xalqaro maktabi yordamchisiman. Qanday savolingiz bor?" deb javob ber.
+2. Boshqa barcha holatlarda: Salomlashma, tanishtirma, faqat yuqoridagi faktlarga tayanib javob ber.
+3. Agar savol tushunarsiz bo'lsa, "Uzr, savolni tushunmadim, telefon raqamimiz: 55-513-75-75" deb javob ber.
 """
 
 class LeadForm(StatesGroup):
@@ -345,41 +346,39 @@ async def cancel_clear(message: Message, state: FSMContext):
 async def handle_ai_chat(message: Message):
     user_text = message.text.strip()
     
-    # Belgilangan menyu tugmalari bosilganda AI ishlamaydi, o'z zanjiri ishlaydi
+    # Menyu tugmalari
     if user_text in ["📝 Ro'yxatdan o'tish", "📅 Kunlik", "📆 Haftalik", "🗓 Oylik", "📊 Umumiy", "✅ Ha, o'chiraman", "❌ Bekor qilish"]:
         return
 
-    if message.bot:
-        try:
-            await message.bot.send_chat_action(chat_id=message.chat.id, action="typing")
-        except:
-            pass
+    # Foydalanuvchi yozayotganini ko'rsatish
+    try:
+        await message.bot.send_chat_action(chat_id=message.chat.id, action="typing")
+    except:
+        pass
 
-    # Har qanday muloqotda pastda doim ko'rinib turuvchi tugma
     reg_keyboard = ReplyKeyboardMarkup(
         keyboard=[[KeyboardButton(text="📝 Ro'yxatdan o'tish")]],
         resize_keyboard=True
     )
 
     try:
-        # Barqaror ishlovchi Groq modeliga so'rov yuborish
+        # TEMPERATURE'ni 0.2 qildik - bu AI'ni juda jiddiy va aniq javob berishga majbur qiladi
         chat_completion = groq_client.chat.completions.create(
             messages=[
                 {"role": "system", "content": MAKTAB_DATA},
                 {"role": "user", "content": user_text}
             ],
             model="llama-3.1-8b-instant",
-            temperature=0.4,
+            temperature=0.2, 
         )
         
         reply_text = chat_completion.choices[0].message.content
         await message.answer(reply_text, reply_markup=reg_keyboard)
         
     except Exception as e:
-        print(f"Groq AI xatolik yuz berdi: {e}")
+        print(f"Xatolik: {e}")
         await message.answer(
             "😊 Mudarris Xalqaro maktabi virtual yordamchisiman!\n\n"
-            "Tizimda vaqtincha texnik yangilanish ketmoqda. Maktabimiz haqida batafsil ma'lumot olish yoki ro'yxatdan o'tish uchun "
-            "to'g'ridan-to'g'ri operatorimiz bilan bog'lanishingiz mumkin: 📞 55-513-75-75.",
+            "Telefon: 55-513-75-75. Boshqa ma'lumotlar uchun operator bilan bog'laning.",
             reply_markup=reg_keyboard
         )
