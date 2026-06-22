@@ -19,8 +19,8 @@ router = Router()
 # Groq mijozini Railway'dagi GROQ_API_KEY orqali ishga tushiramiz
 groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
-# AI uchun maktab haqidagi ma'lumotlar (Prompt)
-MAKTAB_MA'LUMOTLARI = """
+# AI uchun maktab haqidagi ma'lumotlar (O'zgaruvchi nomi xatolik chiqmasligi uchun to'g'rilandi)
+MAKTAB_DATA = """
 Siz "Mudarris Xalqaro maktabi"ning virtual yordamchisiz. Foydalanuvchilar savollariga faqat quyidagi ma'lumotlar asosida, o'zbek tilida, xushmuomala va juda qisqa javob bering:
 1. Maktab qabul qiladi: 0-sinfdan 11-sinfgacha bo'lgan o'quvchilarni.
 2. Ixtisoslashuvi: IT, robototexnika, arab tili va ingliz tili.
@@ -59,7 +59,7 @@ async def cmd_start(message: Message, state: FSMContext):
         "Maktabimiz IT, robototexnika, arab tili va ingliz tili yo‘nalishlariga ixtisoslashtirilgan.\n\n"
         "👨‍🏫 *Arab tili darslarini chet ellik malakali ustozlar olib boradilar.*\n\n"
         "🏆 Farzandingiz maktabni bitirmasdan turib IELTS, CEFR va SAT kabi sertifikatlardan yuqori ball "
-        "olish imkoniyatiga ega bo‘ladi, chunki bizda ushbu sertifikatlar uchun maxsus tayyorlov guruhlari ham mavjud.\n\n"
+        "olish imkoniyatiga ega bo‘ladi, chunki bizda ushbu sertifikatlar uchun maxsus tayyorlov guruhlari ham muxim.\n\n"
         "🍽️ *Maktabda kun davomida 4 mahal ovqat beriladi.*\n\n"
         "✍️ Batafsil ma’lumot olish uchun ro‘yxatdan o'tish tugmasini bosing."
     )
@@ -240,7 +240,7 @@ async def show_leads(message: Message):
     total_pages = max(1, (total + per_page - 1) // per_page)
 
     if not leads:
-        await message.answer("📭 Hozircha bazada hech qanday arizalar magenta emas.")
+        await message.answer("📭 Hozircha bazada hech qanday arizalar mavjud emas.")
         return
 
     lines = [
@@ -337,7 +337,6 @@ async def handle_ai_chat(message: Message):
     if user_text in ["📝 Ro'yxatdan o'tish", "📅 Kunlik", "📆 Haftalik", "🗓 Oylik", "📊 Umumiy", "✅ Ha, o'chiraman", "❌ Bekor qilish"]:
         return
 
-    # Chat action (typing) xavfsiz holatda chaqiriladi
     if message.bot:
         try:
             await message.bot.send_chat_action(chat_id=message.chat.id, action="typing")
@@ -347,7 +346,7 @@ async def handle_ai_chat(message: Message):
     try:
         chat_completion = groq_client.chat.completions.create(
             messages=[
-                {"role": "system", "content": MAKTAB_MA'LUMOTLARI},
+                {"role": "system", "content": MAKTAB_DATA},
                 {"role": "user", "content": user_text}
             ],
             model="llama-3.3-70b-specdec",
